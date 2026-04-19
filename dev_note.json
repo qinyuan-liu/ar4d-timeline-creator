@@ -1,0 +1,197 @@
+一、项目目标（Overview）
+
+构建一个基于 Google Sheets 的协作式甘特图系统：
+
+数据源：Google Sheets（多人编辑）
+数据处理：Python（层级整理 + 时间计算）
+可视化：Frappe Gantt（交互式网页）
+
+目标是实现一个免费、自托管、可扩展的轻量项目管理工具，重点在：
+
+多层级任务结构（WBS）
+计划 vs 实际时间对比
+自动生成甘特图
+支持不同时间粒度视图
+与 Google Sheets 无缝协作
+二、数据源定义（Google Sheets）
+
+数据来源：
+
+👉 https://docs.google.com/spreadsheets/d/1Ow5Or7UxbvwElSWExXI_kR1ZuHB9fhBP/edit
+
+说明：
+
+当前不固定字段结构
+数据结构由 settings.json 控制（后续扩展）
+Python 层负责解析字段 → 标准化为统一任务模型
+三、核心功能需求
+1️⃣ 甘特图生成
+根据任务起止时间自动生成图
+支持：
+计划时间（planned）
+实际时间（actual）
+两者可：
+同时显示（双 bar）
+或切换显示
+2️⃣ 层级结构（重点）
+
+支持多层嵌套：
+
+项目
+ ├── 模块 A
+ │    ├── 子模块 A1
+ │    │     ├── 任务 A1-1
+ │    │     └── 任务 A1-2
+ │    └── 子模块 A2
+ └── 模块 B
+
+要求：
+
+任意层级深度
+可按层级筛选显示
+支持展开 / 折叠（前端实现）
+3️⃣ 父任务时间自动汇总
+
+规则：
+
+父任务 start = 子任务最早 start
+父任务 end = 子任务最晚 end
+
+支持：
+
+自动计算（默认）
+或手动覆盖（后续扩展）
+4️⃣ 时间粒度切换
+
+支持：
+
+日（Day）
+周（Week）
+月（Month）
+自定义（如 2周 / 季度）
+
+由前端（Frappe Gantt view_modes）控制
+
+5️⃣ 多人协作
+Google Sheets 原生支持
+系统只负责读取，不处理冲突
+四、系统架构
+Google Sheets
+     ↓
+Python（数据处理）
+     ↓
+tasks.json
+     ↓
+Frappe Gantt（前端 HTML）
+     ↓
+浏览器展示（交互式）
+五、模块拆分（代码结构）
+
+建议在 PyCharm 项目中这样组织：
+
+project/
+│
+├── config/
+│   └── settings.json        # 字段映射配置
+│
+├── data/
+│   └── tasks.json           # 生成后的数据
+│
+├── scripts/
+│   ├── fetch_sheets.py      # 读取 Google Sheets
+│   ├── transform.py         # 层级处理 + 时间计算
+│   └── export_json.py       # 输出 JSON
+│
+├── web/
+│   ├── index.html           # Gantt 页面
+│   ├── app.js               # 渲染逻辑
+│   └── style.css
+│
+└── main.py                  # 主入口
+六、分步实现路径（非常关键）
+🟢 Step 1：打通数据读取
+
+目标：
+从 Google Sheets → Python
+
+实现方式：
+
+使用 pandas + gspread 或 Google Sheets API
+输出为 DataFrame
+
+👉 输出：
+
+df = load_sheet()
+print(df.head())
+🟢 Step 2：设计统一任务模型
+
+将表格数据转换为统一结构：
+
+{
+  "id": "task_1",
+  "name": "Task A",
+  "parent": "module_1",
+  "planned_start": "...",
+  "planned_end": "...",
+  "actual_start": "...",
+  "actual_end": "...",
+  "progress": 0.5
+}
+
+👉 由 settings.json 控制字段映射（你后面再定义）
+
+🟢 Step 3：层级构建（核心）
+
+实现：
+
+根据 parent_id 构建 tree
+支持递归结构
+
+👉 输出：
+
+tree = build_tree(tasks)
+🟢 Step 4：父任务时间计算（关键逻辑）
+
+递归计算：
+
+def compute_dates(node):
+    if node.children:
+        node.start = min(child.start)
+        node.end = max(child.end)
+🟢 Step 5：导出 Frappe Gantt 格式
+
+Frappe Gantt 要求数据类似：
+
+[
+  {
+    "id": "Task 1",
+    "name": "Task 1",
+    "start": "2026-01-01",
+    "end": "2026-01-05",
+    "progress": 20,
+    "dependencies": ""
+  }
+]
+
+👉 你需要：
+
+planned / actual → 转换策略（如双任务 or 切换）
+🟢 Step 6：前端渲染（Frappe Gantt）
+
+核心代码（思路）：
+
+<script src="frappe-gantt.js"></script>
+<script>
+fetch("tasks.json")
+  .then(res => res.json())
+  .then(data => {
+    new Gantt("#gantt", data, {
+      view_modes: ['Day', 'Week', 'Month']
+    });
+  });
+</script>
+🟢 Step 7：增强功能（第二阶段）
+层级过滤（只显示某层）
+planned vs actual 切换
+自定义 view_modes
+样式优化

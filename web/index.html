@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collaborative Gantt Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page-shell">
+    <section class="hero">
+      <p id="workspace-label" class="eyebrow">Project Timeline Workspace</p>
+      <h1 id="project-title">Collaborative Gantt Manager</h1>
+      <p id="project-subtitle" class="summary"></p>
+      <div class="toolbar">
+        <div class="control-group">
+          <label for="timeline-mode">Timeline</label>
+          <select id="timeline-mode">
+            <option value="planned" selected>Planned only</option>
+            <option value="actual">Actual only</option>
+            <option value="both">Planned + Actual</option>
+          </select>
+        </div>
+        <div class="control-group control-check">
+          <label for="show-group-bars">Group Bars</label>
+          <label class="check-row">
+            <input id="show-group-bars" type="checkbox">
+            <span>Show CATEGORY / SESSION bars</span>
+          </label>
+        </div>
+        <div class="control-group">
+          <label for="range-start">Window Start</label>
+          <input id="range-start" type="date">
+        </div>
+        <div class="control-group">
+          <label for="range-end">Window End</label>
+          <input id="range-end" type="date">
+        </div>
+        <div class="button-group">
+          <button id="apply-range" type="button">Apply window</button>
+          <button id="reset-range" type="button">Full year</button>
+          <button id="zoom-fit" type="button">Fit</button>
+          <span id="zoom-level" class="zoom-level">100%</span>
+          <button id="expand-all" type="button">Expand all</button>
+          <button id="collapse-categories" type="button">Collapse categories</button>
+          <button id="collapse-sessions" type="button">Collapse sessions</button>
+        </div>
+      </div>
+    </section>
+    <section class="board">
+      <div class="board-title">
+        <div>
+          <p class="board-kicker">Timeline Board</p>
+        </div>
+        <div id="legend" class="legend"></div>
+      </div>
+      <div id="gantt" class="gantt-frame"></div>
+      <div id="status" class="status"></div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

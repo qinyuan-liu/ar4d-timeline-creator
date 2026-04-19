@@ -1,0 +1,26 @@
+{
+  "project_name": "ATHAZ project timeline",
+  "project_workspace_label": "Project Timeline Workspace",
+  "project_subtitle": "A structured planning board for published Google Sheets timelines with aligned hierarchy, color-coded categories, and configurable date windows.",
+  "published_csv_url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqlOwPCMpzAaNAzKKM2aKsoIGFQVkwxmdIdhGiXVFwAXYgptEgu6acCDWr2th3Aw/pub?gid=1931643827&single=true&output=csv",
+  "source_mode": "published_csv",
+  "field_mapping": {
+    "category": "CATEGORY",
+    "session": "SESSION",
+    "task": "TASK",
+    "planned_start": "START_planned",
+    "planned_end": "END_planned",
+    "actual_start": "START_actual",
+    "actual_end": "END_actual",
+    "progress": "progress"
+  },
+  "defaults": {
+    "timeline_mode": "planned",
+    "view_mode": "Week",
+    "minimum_time_unit": "Day"
+  },
+  "refresh": {
+    "enabled": true,
+    "interval_seconds": 60
+  }
+}

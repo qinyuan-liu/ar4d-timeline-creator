@@ -1,0 +1,2 @@
+# This project currently runs on the Python standard library.
+# Add external packages here if authenticated Google Sheets access or data tooling is needed later.

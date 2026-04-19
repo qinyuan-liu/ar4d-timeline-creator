@@ -1,0 +1,62 @@
+[
+  {
+    "id": "project_alpha",
+    "name": "Project Alpha",
+    "parent": "",
+    "planned_start": "",
+    "planned_end": "",
+    "actual_start": "",
+    "actual_end": "",
+    "progress": 0
+  },
+  {
+    "id": "module_a",
+    "name": "Module A",
+    "parent": "project_alpha",
+    "planned_start": "",
+    "planned_end": "",
+    "actual_start": "",
+    "actual_end": "",
+    "progress": 0
+  },
+  {
+    "id": "task_a1",
+    "name": "Task A1",
+    "parent": "module_a",
+    "planned_start": "2026-04-20",
+    "planned_end": "2026-04-24",
+    "actual_start": "2026-04-21",
+    "actual_end": "2026-04-25",
+    "progress": 70
+  },
+  {
+    "id": "task_a2",
+    "name": "Task A2",
+    "parent": "module_a",
+    "planned_start": "2026-04-26",
+    "planned_end": "2026-04-30",
+    "actual_start": "",
+    "actual_end": "",
+    "progress": 10
+  },
+  {
+    "id": "module_b",
+    "name": "Module B",
+    "parent": "project_alpha",
+    "planned_start": "",
+    "planned_end": "",
+    "actual_start": "",
+    "actual_end": "",
+    "progress": 0
+  },
+  {
+    "id": "task_b1",
+    "name": "Task B1",
+    "parent": "module_b",
+    "planned_start": "2026-05-01",
+    "planned_end": "2026-05-07",
+    "actual_start": "",
+    "actual_end": "",
+    "progress": 0
+  }
+]
