@@ -374,6 +374,18 @@ input:hover {
   outline: 1px solid rgba(255, 255, 255, 0.24);
 }
 
+.timeline-bar.recurring-bar {
+  background-image:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.34) 0,
+      rgba(255, 255, 255, 0.34) 6px,
+      rgba(255, 255, 255, 0.08) 6px,
+      rgba(255, 255, 255, 0.08) 12px
+    );
+  border-style: dashed;
+}
+
 .timeline-date-label {
   position: absolute;
   top: 50%;
@@ -449,6 +461,20 @@ input:hover {
   text-overflow: ellipsis;
 }
 
+.task-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid #c6d2e4;
+  border-radius: 999px;
+  background: #f4f8ff;
+  color: #35527e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .category-chip {
   width: 8px;
   height: 8px;
@@ -458,6 +484,10 @@ input:hover {
 
 .timeline-row-category .task-name {
   letter-spacing: 0.01em;
+}
+
+.timeline-row-recurring .timeline-task-cell {
+  background: #fcfdff;
 }
 
 @media (max-width: 960px) {

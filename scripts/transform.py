@@ -4,8 +4,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from scripts.fetch_sheets import load_settings
-
 
 @dataclass
 class TaskNode:
@@ -13,13 +11,78 @@ class TaskNode:
     children: list["TaskNode"] = field(default_factory=list)
 
 
-def transform_records(records: list[dict[str, Any]]) -> dict[str, Any]:
-    settings = load_settings()
-    normalized_records = [_normalize_record(record, settings["field_mapping"]) for record in records]
-    tasks = _build_three_level_tasks(normalized_records)
-    nodes = _build_nodes(tasks)
-    _compute_rollups(nodes)
-    return _build_payload(nodes, settings)
+def transform_datasets(
+    dataset_records: dict[str, list[dict[str, Any]]],
+    recurring_records: list[dict[str, Any]],
+    settings: dict[str, Any],
+) -> dict[str, Any]:
+    datasets_payload: dict[str, Any] = {}
+    dataset_order: list[str] = []
+
+    for dataset_config in settings.get("datasets", []):
+        dataset_key = dataset_config["key"]
+        dataset_order.append(dataset_key)
+        records = dataset_records.get(dataset_key, [])
+        normalized_records = [_normalize_record(record, settings["field_mapping"]) for record in records]
+        tasks = _build_three_level_tasks(normalized_records)
+        nodes = _build_nodes(tasks)
+        _compute_rollups(nodes)
+        serialized_tasks = _serialize_nodes(nodes)
+        recurring = _normalize_recurring_records(
+            recurring_records,
+            settings.get("recurring_field_mapping", {}),
+            dataset_key,
+        )
+
+        datasets_payload[dataset_key] = {
+            "key": dataset_key,
+            "name": dataset_config.get("name", dataset_key),
+            "tasks": serialized_tasks,
+            "recurring": recurring,
+        }
+
+    if not datasets_payload:
+        fallback_key = settings.get("defaults", {}).get("dataset_key", "AR4D")
+        dataset_order.append(fallback_key)
+        records = dataset_records.get(fallback_key, [])
+        normalized_records = [_normalize_record(record, settings["field_mapping"]) for record in records]
+        tasks = _build_three_level_tasks(normalized_records)
+        nodes = _build_nodes(tasks)
+        _compute_rollups(nodes)
+        datasets_payload[fallback_key] = {
+            "key": fallback_key,
+            "name": fallback_key,
+            "tasks": _serialize_nodes(nodes),
+            "recurring": _normalize_recurring_records(
+                recurring_records,
+                settings.get("recurring_field_mapping", {}),
+                fallback_key,
+            ),
+        }
+
+    return {
+        "meta": {
+            "project_name": settings["project_name"],
+            "project_workspace_label": settings.get("project_workspace_label", "Project Timeline Workspace"),
+            "project_subtitle": settings.get("project_subtitle", ""),
+            "default_dataset_key": settings.get("defaults", {}).get("dataset_key", dataset_order[0]),
+            "default_timeline_mode": settings["defaults"]["timeline_mode"],
+            "default_view_mode": settings["defaults"]["view_mode"],
+            "minimum_time_unit": settings["defaults"]["minimum_time_unit"],
+            "refresh_interval_seconds": settings.get("refresh", {}).get("interval_seconds", 60),
+            "supported_view_modes": ["Day", "Week", "Month"],
+            "supported_timeline_modes": ["planned", "actual", "both"],
+            "supported_collapse_levels": ["CATEGORY", "SESSION"],
+            "datasets": [
+                {
+                    "key": dataset_key,
+                    "name": datasets_payload[dataset_key]["name"],
+                }
+                for dataset_key in dataset_order
+            ],
+        },
+        "datasets": datasets_payload,
+    }
 
 
 def _normalize_record(record: dict[str, Any], field_mapping: dict[str, str]) -> dict[str, Any]:
@@ -40,6 +103,51 @@ def _normalize_record(record: dict[str, Any], field_mapping: dict[str, str]) -> 
         "actual_end": _parse_date(_read_text(record, field_mapping["actual_end"])),
         "progress": _parse_progress(record.get(progress_column, "")),
     }
+
+
+def _normalize_recurring_records(
+    recurring_records: list[dict[str, Any]],
+    field_mapping: dict[str, str],
+    dataset_key: str,
+) -> list[dict[str, Any]]:
+    if not field_mapping:
+        return []
+
+    normalized: list[dict[str, Any]] = []
+    for record in recurring_records:
+        chart_key = _read_text(record, field_mapping["chart"])
+        if chart_key.upper() != dataset_key.upper():
+            continue
+
+        category = _read_text(record, field_mapping["category"])
+        session = _read_text(record, field_mapping["session"])
+        task_name = _read_text(record, field_mapping["task"])
+        if not category or not session or not task_name:
+            continue
+
+        recurring_weeks = _parse_float(record.get(field_mapping["recurring_weeks"], ""))
+        duration_days = _parse_integer(record.get(field_mapping["duration_days"], ""))
+        planned_start = _parse_date(_read_text(record, field_mapping["planned_start"]))
+        actual_start = _parse_date(_read_text(record, field_mapping.get("actual_start", "")))
+
+        if not planned_start or recurring_weeks <= 0 or duration_days <= 0:
+            continue
+
+        normalized.append(
+            {
+                "id": _slugify("recurring", f"{dataset_key} {category} {session} {task_name} {planned_start}"),
+                "dataset_key": dataset_key,
+                "category": category,
+                "session": session,
+                "task": task_name,
+                "planned_start": planned_start,
+                "actual_start": actual_start,
+                "duration_days": duration_days,
+                "recurring_weeks": recurring_weeks,
+            }
+        )
+
+    return normalized
 
 
 def _build_three_level_tasks(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -149,26 +257,11 @@ def _rollup_range(task: dict[str, Any], children: list[TaskNode], start_key: str
     task[end_key] = max(ends) if ends else ""
 
 
-def _build_payload(nodes: list[TaskNode], settings: dict[str, Any]) -> dict[str, Any]:
+def _serialize_nodes(nodes: list[TaskNode]) -> list[dict[str, Any]]:
     serialized_tasks: list[dict[str, Any]] = []
     for node in nodes:
         _flatten_node(node, serialized_tasks)
-
-    return {
-        "meta": {
-            "project_name": settings["project_name"],
-            "project_workspace_label": settings.get("project_workspace_label", "Project Timeline Workspace"),
-            "project_subtitle": settings.get("project_subtitle", ""),
-            "default_timeline_mode": settings["defaults"]["timeline_mode"],
-            "default_view_mode": settings["defaults"]["view_mode"],
-            "minimum_time_unit": settings["defaults"]["minimum_time_unit"],
-            "refresh_interval_seconds": settings.get("refresh", {}).get("interval_seconds", 60),
-            "supported_view_modes": ["Day", "Week", "Month"],
-            "supported_timeline_modes": ["planned", "actual", "both"],
-            "supported_collapse_levels": ["CATEGORY", "SESSION"],
-        },
-        "tasks": serialized_tasks,
-    }
+    return serialized_tasks
 
 
 def _flatten_node(node: TaskNode, output: list[dict[str, Any]]) -> None:
@@ -192,6 +285,8 @@ def _flatten_node(node: TaskNode, output: list[dict[str, Any]]) -> None:
 
 
 def _read_text(record: dict[str, Any], key: str) -> str:
+    if not key:
+        return ""
     value = record.get(key, "")
     return str(value).strip()
 
@@ -215,6 +310,20 @@ def _parse_progress(value: Any) -> int:
     if number <= 1:
         return round(number * 100)
     return round(number)
+
+
+def _parse_integer(value: Any) -> int:
+    text = str(value).strip()
+    if not text:
+        return 0
+    return max(0, round(float(text)))
+
+
+def _parse_float(value: Any) -> float:
+    text = str(value).strip()
+    if not text:
+        return 0.0
+    return float(text)
 
 
 def _slugify(prefix: str, raw_value: str) -> str:

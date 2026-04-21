@@ -8,8 +8,8 @@ from threading import Event, Thread
 from time import sleep
 
 from scripts.export_json import export_tasks_json
-from scripts.fetch_sheets import load_records, load_settings
-from scripts.transform import transform_records
+from scripts.fetch_sheets import load_dataset_records, load_recurring_records, load_settings
+from scripts.transform import transform_datasets
 
 
 ROOT = Path(__file__).resolve().parent
@@ -21,10 +21,18 @@ class PreviewServer(ThreadingHTTPServer):
 
 
 def generate_tasks_json() -> Path:
-    records = load_records()
-    payload = transform_records(records)
+    settings = load_settings()
+    dataset_records = load_dataset_records()
+    recurring_records = load_recurring_records()
+    payload = transform_datasets(dataset_records, recurring_records, settings)
     output_path = export_tasks_json(payload)
-    print(f"Exported {len(payload['tasks'])} tasks to {output_path}")
+    dataset_count = len(payload["datasets"])
+    task_count = sum(len(dataset["tasks"]) for dataset in payload["datasets"].values())
+    recurring_count = sum(len(dataset["recurring"]) for dataset in payload["datasets"].values())
+    print(
+        f"Exported {task_count} tasks and {recurring_count} recurring definitions "
+        f"across {dataset_count} datasets to {output_path}"
+    )
     return output_path
 
 
